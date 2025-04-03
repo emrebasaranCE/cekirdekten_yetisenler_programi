@@ -13,7 +13,7 @@ You can look details from [this](https://kartaca.com/cekirdekten-yetisenler-prog
 
 ## What do I have in mind for these requirements?
 
-- Java Spring Boot for backend
+- Python for backend
 - React or Vue.js i didn't decide yet
 - And for deploymnet, i will use docker and if i had the chance, maybe i can set configurations for k8s
 
