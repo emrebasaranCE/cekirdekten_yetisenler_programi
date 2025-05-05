@@ -1,2 +1,5 @@
-kartaca_env/
-backend_services/__pycache__/
+**/__pycache__/
+/data/mongodb_data/
+/data/rabbitmq_data/
+
+**.vscode
