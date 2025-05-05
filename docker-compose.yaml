@@ -1,29 +1,125 @@
-services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:latest
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-    ports:
-      - "2181:2181"
+version: '3.8'
 
-  kafka:
-    image: confluentinc/cp-kafka:latest
+services:
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
     ports:
-      - "9092:9092"
+      - "5672:5672"
+      - "15672:15672"  
     environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      RABBITMQ_DEFAULT_USER: guest
+      RABBITMQ_DEFAULT_PASS: guest
+    volumes:
+      - ./data/rabbitmq_data:/var/lib/rabbitmq
+    networks:
+      - air_pollution_net
+
   mongodb:
-    image: mongo
+    image: mongo:latest
     container_name: mongodb
+    restart: always
     ports:
       - "27017:27017"
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: rootpassword
+      MONGO_INITDB_DATABASE: air_pollution
     volumes:
-      - mongodb_data:/data/db
+      - ./data/mongodb_data:/data/db
+    networks:
+      - air_pollution_net
+
+  data_collector:
+    build:
+      context: ./backend/data_collector
+    container_name: data_collector
+    depends_on:
+      - rabbitmq
+    ports:
+      - "5001:5001"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5001
+      DEBUG: "False"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+      POLLUTION_DATA_QUEUE: pollution_data_queue
+    networks:
+      - air_pollution_net
+
+  data_processor:
+    build:
+      context: ./backend/data_processor
+    container_name: data_processor
+    depends_on:
+      - rabbitmq
+      - mongodb
+    ports:
+      - "5002:5002"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5002
+      DEBUG: "False"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+      POLLUTION_DATA_QUEUE: pollution_data_queue
+      ANOMALY_QUEUE: anomaly_notification_queue
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
+      MONGODB_USER: root
+      MONGODB_PASS: rootpassword
+      MONGODB_DB: air_pollution
+    networks:
+      - air_pollution_net
+
+  notification_service:
+    build:
+      context: ./backend/notification_service
+    container_name: notification_service
+    depends_on:
+      - rabbitmq
+      - mongodb
+    ports:
+      - "5003:5003"
+    environment:
+      HOST: 0.0.0.0
+      PORT: 5003
+      DEBUG: "False"
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: 5672
+      RABBITMQ_USER: guest
+      RABBITMQ_PASS: guest
+      ANOMALY_QUEUE: anomaly_notification_queue
+      USER_NOTIFICATION_QUEUE: user_notification_queue
+      MONGODB_HOST: mongodb
+      MONGODB_PORT: 27017
+      MONGODB_USER: root
+      MONGODB_PASS: rootpassword
+      MONGODB_DB: air_pollution
+    networks:
+      - air_pollution_net
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: frontend
+    depends_on:
+      - notification_service
+    ports:
+      - "80:80"       # serve app on http://localhost
+    networks:
+      - air_pollution_net
 
 volumes:
+  rabbitmq_data:
   mongodb_data:
+
+networks:
+  air_pollution_net:
+    driver: bridge

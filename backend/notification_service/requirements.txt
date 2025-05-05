@@ -1,0 +1,7 @@
+# backend/notification_service/requirements.txt
+
+Flask>=2.2,<3.0
+Flask-Cors>=3.0
+Flask-SocketIO==5.5.1
+pika>=1.2
+pymongo>=4.0

@@ -1,0 +1,7 @@
+# backend/data_processor/requirements.txt
+
+Flask>=2.2,<3.0
+Flask-Cors>=3.0
+pika>=1.2
+pymongo>=4.0
+numpy>=1.24
