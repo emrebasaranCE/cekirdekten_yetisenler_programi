@@ -4,9 +4,10 @@ services:
   rabbitmq:
     image: rabbitmq:3-management
     container_name: rabbitmq
+    restart: always
     ports:
       - "5672:5672"
-      - "15672:15672"  
+      - "15672:15672"
     environment:
       RABBITMQ_DEFAULT_USER: guest
       RABBITMQ_DEFAULT_PASS: guest
@@ -14,6 +15,12 @@ services:
       - ./data/rabbitmq_data:/var/lib/rabbitmq
     networks:
       - air_pollution_net
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
   mongodb:
     image: mongo:latest
@@ -29,11 +36,18 @@ services:
       - ./data/mongodb_data:/data/db
     networks:
       - air_pollution_net
+    healthcheck:
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\" -u root -p rootpassword --authenticationDatabase admin || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
   data_collector:
     build:
       context: ./backend/data_collector
     container_name: data_collector
+    restart: always
     depends_on:
       - rabbitmq
     ports:
@@ -49,11 +63,18 @@ services:
       POLLUTION_DATA_QUEUE: pollution_data_queue
     networks:
       - air_pollution_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5001/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
   data_processor:
     build:
       context: ./backend/data_processor
     container_name: data_processor
+    restart: always
     depends_on:
       - rabbitmq
       - mongodb
@@ -76,11 +97,18 @@ services:
       MONGODB_DB: air_pollution
     networks:
       - air_pollution_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5002/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
   notification_service:
     build:
       context: ./backend/notification_service
     container_name: notification_service
+    restart: always
     depends_on:
       - rabbitmq
       - mongodb
@@ -103,16 +131,23 @@ services:
       MONGODB_DB: air_pollution
     networks:
       - air_pollution_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5003/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
 
   frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
     container_name: frontend
+    restart: always
     depends_on:
       - notification_service
     ports:
-      - "80:80"       # serve app on http://localhost
+      - "80:80"
     networks:
       - air_pollution_net
 

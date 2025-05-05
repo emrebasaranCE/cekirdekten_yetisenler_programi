@@ -1,3 +1,22 @@
+# Contents
+
+- [1. Rise Through The Ranks](#1-rise-through-the-ranks)  
+- [2. Tech Stack](#2-tech-stack)  
+- [3. Project Layout](#3-project-layout)  
+  - [1. Repository Layout](#31-repository-layout)
+  - [2. Docker Compose](#32-docker-compose)
+    - [1. Restart & Healthchecks](#321-restart--healthchecks)
+- [4. Project Documentation](#4-project-documentation)  
+  - [4.1 Backend](#41-backend)  
+  - [4.2 Frontend](#42-frontend)  
+  - [4.3 Data Handling](#43-data-handling)  
+  - [4.4 Manual and Automatic Data Ingestion](#44-manual-and-automatic-data-ingestion)  
+- [5. Usage](#5-usage)  
+  - [5.1 Prerequisites](#51-prerequisites)  
+  - [5.2 Running the Stack](#52-running-the-stack)  
+
+---
+
 # 1. Rise Through The Ranks
 
 A real-time air-pollution monitoring web application built for Kartaca’s “Cekirdekten Yetişenler” program (2025).  
@@ -17,7 +36,9 @@ Frontend components (map, charts) are scaffolded but the actual data visualizati
 
 ---
 
-## 3. Repository Layout
+## 3. Project Layout
+
+### 3.1. Repository Layout
 
 ```
 air-pollution-monitoring/
@@ -61,6 +82,34 @@ air-pollution-monitoring/
     └── manual-input.sh                  
 ```
 
+### 3.2. Docker Compose
+
+This project's entire stack is wired up via docker-compose.yml (version 3.8). Below is a summary of the key settings — please refer to the top‐level docker-compose.yml for the full file.
+
+#### 3.2.1. Restart & Healthchecks
+
+Every service is configured with restart: always so that Docker will automatically bring it back up if it crashes. In addition:
+  - **rabbitmq**
+    - **Healthcheck**: CMD rabbitmqctl status
+    - **Ports**: 5672 (AMQP), 15672 (management UI)
+  - **mongodb**
+    - **Healthcheck**: 
+      ```bash
+      test: ["CMD-SHELL", "mongosh --quiet --eval \"db.adminCommand({ ping: 1 })\" -u root -p rootpassword --authenticationDatabase admin || exit 1"]
+      ```
+      **Ports**:27017
+  - **data_collector**
+    - **Healthcheck**: `CMD curl -f http://localhost:5001/health`
+    - **Ports**: 5001
+  - **data_processor**
+    - **Healthcheck**: `CMD curl -f http://localhost:5002/health`
+    - **Ports**: 5002
+  - **notification_service**
+    - **Healthcheck**: `CMD curl -f http://localhost:5003/health`
+    - **Ports**: 5003
+  - **frontend**
+    - **Healthcheck**: *I wasnt able to integrate frontend healthcheck.*
+    - **Ports**: 80
 
 ---
 
@@ -68,19 +117,19 @@ air-pollution-monitoring/
 
 For detailed information on each component, please refer to the following README files:
 
-### 4.1 Backend
+### 4.1. Backend
 
 - [Data Collector, Data Processor and Notification Service](backend/README.md)
 
-### 4.2 Frontend
+### 4.2. Frontend
 
 - [Frontend With Vue.js](frontend/README.md)
 
-### 4.3 Data Handling
+### 4.3. Data Handling
 
 - [MongoDB And RabbitMQ](data/README.md)
 
-### 4.4 Manual and Automatic Data Ingestion
+### 4.4. Manual and Automatic Data Ingestion
 
 - [Bash](scripts/README.md)
 
@@ -88,12 +137,13 @@ For detailed information on each component, please refer to the following README
 
 ## 5. Usage
 
-### 5.1 Prerequisites
+### 5.1. Prerequisites
 
 - Docker (v20.10+)
 - Docker Compose (v2.0+)
+- Internet Connection (for packages)
 
-### 5.2 Running the Stack
+### 5.2. Running the Stack
 
 1. **Clone the repo**  
    ```bash
@@ -109,3 +159,10 @@ For detailed information on each component, please refer to the following README
     http://localhost/
     ```
 --- 
+
+
+#### Finishing Note
+
+This project challenged me to step out of my comfort zone and explore new technologies.  
+Along the way, I gained hands-on experience with microservices architecture, real-time data processing, message queues, and frontend frameworks.  
+Overall, it was a rewarding journey that significantly expanded my skill set.

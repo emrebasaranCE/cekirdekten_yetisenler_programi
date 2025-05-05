@@ -22,7 +22,7 @@ CORS(app)
 socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Logging configuration
-tlogging.basicConfig(
+logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
